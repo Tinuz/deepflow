@@ -347,61 +347,79 @@ export function TimerClient(): JSX.Element {
           </div>
         </div>
 
-        {/* Mode Selector - Grouped Layout */}
+        {/* Mode Selector - Grouped Layout with Clear Labels */}
         <div className="w-full max-w-md mb-8 sm:mb-12 px-4">
-          <div className="space-y-2">
-            {/* Focus Modes */}
-            <div className="flex gap-2">
-              {(['pomodoro', 'deep50', 'deep90'] as TimerMode[]).map((key) => {
-                const preset = TIMER_PRESETS[key];
-                return (
-                  <button
-                    key={key}
-                    onClick={() => switchMode(key)}
-                    disabled={isActive}
-                    className={cn(
-                      'flex-1 py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-300 active:scale-95',
-                      'flex flex-col items-center gap-1',
-                      mode === key
-                        ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                        : 'bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-50'
-                    )}
-                  >
-                    <span className="text-lg font-bold">{preset.focus / 60}</span>
-                    <span className="text-[10px] opacity-75 uppercase tracking-wide">
-                      {key === 'pomodoro' ? 'Focus' : key === 'deep50' ? 'Deep' : 'Ultra'}
-                    </span>
-                  </button>
-                );
-              })}
+          <div className="space-y-3">
+            {/* Focus Modes Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                  Focus Sessions
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+              </div>
+              <div className="flex gap-2">
+                {(['pomodoro', 'deep50', 'deep90'] as TimerMode[]).map((key) => {
+                  const preset = TIMER_PRESETS[key];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => switchMode(key)}
+                      disabled={isActive}
+                      className={cn(
+                        'flex-1 py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-300 active:scale-95',
+                        'flex flex-col items-center gap-1',
+                        mode === key
+                          ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                          : 'bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-50'
+                      )}
+                    >
+                      <span className="text-xl font-bold">{preset.focus / 60}</span>
+                      <span className="text-[9px] opacity-75 uppercase tracking-wider">
+                        {key === 'pomodoro' ? 'Pomodoro' : key === 'deep50' ? 'Deep' : 'Ultra'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             
-            {/* Break Modes + Custom */}
-            <div className="flex gap-2">
-              {(['short', 'long', 'custom'] as TimerMode[]).map((key) => {
-                const preset = TIMER_PRESETS[key];
-                return (
-                  <button
-                    key={key}
-                    onClick={() => switchMode(key)}
-                    disabled={isActive}
-                    className={cn(
-                      'flex-1 py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-300 active:scale-95',
-                      'flex flex-col items-center gap-1',
-                      mode === key
-                        ? 'bg-accent text-accent-foreground shadow-lg shadow-accent/25'
-                        : 'bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-50'
-                    )}
-                  >
-                    <span className="text-lg font-bold">
-                      {key === 'custom' ? '...' : preset.focus / 60}
-                    </span>
-                    <span className="text-[10px] opacity-75 uppercase tracking-wide">
-                      {key === 'short' ? 'Short' : key === 'long' ? 'Long' : 'Custom'}
-                    </span>
-                  </button>
-                );
-              })}
+            {/* Break Modes Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-accent">
+                  Break Time
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+              </div>
+              <div className="flex gap-2">
+                {(['short', 'long', 'custom'] as TimerMode[]).map((key) => {
+                  const preset = TIMER_PRESETS[key];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => switchMode(key)}
+                      disabled={isActive}
+                      className={cn(
+                        'flex-1 py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-300 active:scale-95',
+                        'flex flex-col items-center gap-1',
+                        mode === key
+                          ? 'bg-accent text-accent-foreground shadow-lg shadow-accent/25'
+                          : 'bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-50'
+                      )}
+                    >
+                      <span className="text-xl font-bold">
+                        {key === 'custom' ? '···' : preset.focus / 60}
+                      </span>
+                      <span className="text-[9px] opacity-75 uppercase tracking-wider">
+                        {key === 'short' ? 'Short' : key === 'long' ? 'Long' : 'Custom'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
