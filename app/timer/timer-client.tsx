@@ -381,7 +381,7 @@ export function TimerClient(): JSX.Element {
               e.currentTarget.classList.remove('scale-95');
             }}
             className={cn(
-              'w-24 h-24 sm:w-20 sm:h-20 rounded-3xl transition-all duration-300 shadow-xl',
+              'relative w-24 h-24 sm:w-20 sm:h-20 rounded-3xl transition-all duration-300 shadow-xl',
               'flex items-center justify-center touch-manipulation select-none cursor-pointer',
               'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2',
               '-webkit-tap-highlight-color: transparent',
@@ -391,11 +391,13 @@ export function TimerClient(): JSX.Element {
             )}
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
-            {isActive ? (
-              <Pause size={36} className="sm:w-8 sm:h-8 pointer-events-none" fill="currentColor" />
-            ) : (
-              <Play size={36} className="sm:w-8 sm:h-8 ml-1 pointer-events-none" fill="currentColor" />
-            )}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {isActive ? (
+                <Pause size={36} className="sm:w-8 sm:h-8" fill="currentColor" />
+              ) : (
+                <Play size={36} className="sm:w-8 sm:h-8" fill="currentColor" style={{ marginLeft: '2px' }} />
+              )}
+            </div>
           </button>
 
           <div className="w-14 h-14 sm:w-12 sm:h-12" />
