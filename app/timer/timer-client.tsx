@@ -114,22 +114,16 @@ export function TimerClient(): JSX.Element {
   }, [mode, duration]); // timeLeft and sessionHistory removed!
 
   useEffect(() => {
-    console.log('⏱️ Timer effect triggered:', { isActive, timeLeft, mode });
-    
     if (!isActive) {
-      console.log('⏸️ Timer paused or stopped');
       return;
     }
 
-    console.log('▶️ Starting timer interval');
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         const newTime = prev - 1;
-        console.log('⏰ Tick:', newTime);
         
         // Check for completion
         if (newTime === 0) {
-          console.log('🎉 Session complete!');
           setIsActive(false);
           saveSession(false);
           sendNotification('Session Complete! 🎉', `Great job! You completed a ${TIMER_PRESETS[mode].label} session.`);
@@ -145,15 +139,17 @@ export function TimerClient(): JSX.Element {
     }, 1000);
 
     return () => {
-      console.log('🧹 Cleaning up interval');
       clearInterval(interval);
     };
-  }, [isActive, mode, saveSession, sendNotification]); // timeLeft removed from dependencies!
+  }, [isActive, mode, saveSession, sendNotification, timeLeft]);
 
   // Fullscreen handler - with iOS Safari support
   const toggleFullscreen = async (): Promise<void> => {
     // Check if running as iOS PWA (standalone mode)
-    const isIOSPWA = 'standalone' in window.navigator && (window.navigator as any).standalone;
+    interface NavigatorStandalone extends Navigator {
+      standalone?: boolean;
+    }
+    const isIOSPWA = 'standalone' in window.navigator && (window.navigator as NavigatorStandalone).standalone;
     
     // iOS Safari doesn't support Fullscreen API properly
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -168,19 +164,24 @@ export function TimerClient(): JSX.Element {
     if (!document.fullscreenElement) {
       try {
         // Try different fullscreen methods for browser compatibility
-        const elem = document.documentElement;
+        interface DocumentElementWithVendorFullscreen extends HTMLElement {
+          webkitRequestFullscreen?: () => Promise<void>;
+          mozRequestFullScreen?: () => Promise<void>;
+          msRequestFullscreen?: () => Promise<void>;
+        }
+        const elem = document.documentElement as DocumentElementWithVendorFullscreen;
         if (elem.requestFullscreen) {
           await elem.requestFullscreen();
-        } else if ((elem as any).webkitRequestFullscreen) {
-          await (elem as any).webkitRequestFullscreen();
-        } else if ((elem as any).mozRequestFullScreen) {
-          await (elem as any).mozRequestFullScreen();
-        } else if ((elem as any).msRequestFullscreen) {
-          await (elem as any).msRequestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          await elem.webkitRequestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+          await elem.mozRequestFullScreen();
+        } else if (elem.msRequestFullscreen) {
+          await elem.msRequestFullscreen();
         }
         setIsFullscreen(true);
-      } catch (err) {
-        console.error('Error entering fullscreen:', err);
+      } catch {
+        // Silent fail for fullscreen
       }
     } else {
       if (document.exitFullscreen) {
@@ -192,11 +193,17 @@ export function TimerClient(): JSX.Element {
 
   useEffect(() => {
     const handleFullscreenChange = (): void => {
+      interface DocumentWithVendorFullscreen extends Document {
+        webkitFullscreenElement?: Element;
+        mozFullScreenElement?: Element;
+        msFullscreenElement?: Element;
+      }
+      const doc = document as DocumentWithVendorFullscreen;
       setIsFullscreen(
         !!(document.fullscreenElement || 
-           (document as any).webkitFullscreenElement || 
-           (document as any).mozFullScreenElement ||
-           (document as any).msFullscreenElement)
+           doc.webkitFullscreenElement || 
+           doc.mozFullScreenElement ||
+           doc.msFullscreenElement)
       );
     };
 
@@ -225,26 +232,14 @@ export function TimerClient(): JSX.Element {
   };
 
   const toggleTimer = (): void => {
-    console.log('🔄 toggleTimer called - Current state:', { isActive, timeLeft, mode });
-    
     if (!isActive && !notificationsEnabled && 'Notification' in window) {
-      console.log('📢 Requesting notification permission');
       requestNotificationPermission();
     }
     
-    const newState = !isActive;
-    console.log('✅ Setting isActive to:', newState);
-    setIsActive(newState);
+    setIsActive(!isActive);
   };
 
   const handleTimerToggle = (e: React.MouseEvent | React.TouchEvent): void => {
-    console.log('👆 handleTimerToggle triggered', {
-      type: e.type,
-      isTouch: 'touches' in e,
-      currentIsActive: isActive,
-      timestamp: new Date().toISOString()
-    });
-    
     e.preventDefault();
     e.stopPropagation();
     toggleTimer();
@@ -268,15 +263,8 @@ export function TimerClient(): JSX.Element {
 
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-hidden relative">
-      {/* Debug Info - Visible on screen */}
-      <div className="fixed top-0 left-0 right-0 bg-black/80 text-white text-xs p-2 z-50 font-mono">
-        <div>State: {isActive ? '▶️ RUNNING' : '⏸️ PAUSED'}</div>
-        <div>Time: {formatTime(timeLeft)} / {formatTime(duration)}</div>
-        <div>Mode: {TIMER_PRESETS[mode].label}</div>
-      </div>
-
       {/* Header - Mobile Optimized */}
-      <div className="flex justify-between items-center mb-6 sm:mb-8 mt-12">
+      <div className="flex justify-between items-center mb-6 sm:mb-8">
         <div className="flex gap-2">
           <Button
             variant="ghost"
@@ -394,23 +382,17 @@ export function TimerClient(): JSX.Element {
           {/* Native button for better mobile touch response */}
           <button
             type="button"
-            onClick={(e) => {
-              console.log('🖱️ onClick fired on play/pause button');
-              handleTimerToggle(e);
-            }}
+            onClick={handleTimerToggle}
             onTouchStart={(e) => {
-              console.log('👇 onTouchStart fired');
               e.preventDefault();
               e.currentTarget.classList.add('scale-95');
             }}
             onTouchEnd={(e) => {
-              console.log('👆 onTouchEnd fired');
               e.preventDefault();
               e.currentTarget.classList.remove('scale-95');
               handleTimerToggle(e);
             }}
             onTouchCancel={(e) => {
-              console.log('❌ onTouchCancel fired');
               e.currentTarget.classList.remove('scale-95');
             }}
             className={cn(
