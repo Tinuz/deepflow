@@ -101,41 +101,49 @@ export function TimerClient(): JSX.Element {
     localStorage.setItem('deepflow-sessions', JSON.stringify(updated));
   }, [mode, duration, timeLeft, sessionHistory]);
 
-  // Timer logic
+  // Timer logic - Fixed to prevent re-running on every tick
+  const timeLeftRef = useRef(timeLeft);
+  
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
   useEffect(() => {
     console.log('⏱️ Timer effect triggered:', { isActive, timeLeft, mode });
     
-    let interval: NodeJS.Timeout | undefined;
-
-    if (isActive && timeLeft > 0) {
-      console.log('▶️ Starting timer interval');
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          console.log('⏰ Tick:', prev - 1);
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (timeLeft === 0 && isActive) {
-      console.log('🎉 Session complete!');
-      setIsActive(false);
-      saveSession(false);
-      sendNotification('Session Complete! 🎉', `Great job! You completed a ${TIMER_PRESETS[mode].label} session.`);
-      
-      // Play completion sound
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    } else {
+    if (!isActive) {
       console.log('⏸️ Timer paused or stopped');
+      return;
     }
 
+    console.log('▶️ Starting timer interval');
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        const newTime = prev - 1;
+        console.log('⏰ Tick:', newTime);
+        
+        // Check for completion
+        if (newTime === 0) {
+          console.log('🎉 Session complete!');
+          setIsActive(false);
+          saveSession(false);
+          sendNotification('Session Complete! 🎉', `Great job! You completed a ${TIMER_PRESETS[mode].label} session.`);
+          
+          // Play completion sound
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+        }
+        
+        return newTime;
+      });
+    }, 1000);
+
     return () => {
-      if (interval) {
-        console.log('🧹 Cleaning up interval');
-        clearInterval(interval);
-      }
+      console.log('🧹 Cleaning up interval');
+      clearInterval(interval);
     };
-  }, [isActive, timeLeft, mode, saveSession, sendNotification]);
+  }, [isActive, mode, saveSession, sendNotification]); // timeLeft removed from dependencies!
 
   // Fullscreen handler
   const toggleFullscreen = async (): Promise<void> => {
