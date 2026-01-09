@@ -150,11 +150,34 @@ export function TimerClient(): JSX.Element {
     };
   }, [isActive, mode, saveSession, sendNotification]); // timeLeft removed from dependencies!
 
-  // Fullscreen handler
+  // Fullscreen handler - with iOS Safari support
   const toggleFullscreen = async (): Promise<void> => {
+    // Check if running as iOS PWA (standalone mode)
+    const isIOSPWA = 'standalone' in window.navigator && (window.navigator as any).standalone;
+    
+    // iOS Safari doesn't support Fullscreen API properly
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (isIOS && !isIOSPWA) {
+      // On iOS Safari, we can't go fullscreen, but we can scroll to hide the browser UI
+      window.scrollTo(0, 1);
+      alert('Tip: Add DeepFlow to your home screen for a fullscreen experience!\n\nTap Share → Add to Home Screen');
+      return;
+    }
+    
     if (!document.fullscreenElement) {
       try {
-        await document.documentElement.requestFullscreen();
+        // Try different fullscreen methods for browser compatibility
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if ((elem as any).webkitRequestFullscreen) {
+          await (elem as any).webkitRequestFullscreen();
+        } else if ((elem as any).mozRequestFullScreen) {
+          await (elem as any).mozRequestFullScreen();
+        } else if ((elem as any).msRequestFullscreen) {
+          await (elem as any).msRequestFullscreen();
+        }
         setIsFullscreen(true);
       } catch (err) {
         console.error('Error entering fullscreen:', err);
@@ -169,11 +192,21 @@ export function TimerClient(): JSX.Element {
 
   useEffect(() => {
     const handleFullscreenChange = (): void => {
-      setIsFullscreen(!!document.fullscreenElement);
+      setIsFullscreen(
+        !!(document.fullscreenElement || 
+           (document as any).webkitFullscreenElement || 
+           (document as any).mozFullScreenElement ||
+           (document as any).msFullscreenElement)
+      );
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    // Listen to all vendor-prefixed fullscreen events
+    const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+    events.forEach(event => document.addEventListener(event, handleFullscreenChange));
+    
+    return () => {
+      events.forEach(event => document.removeEventListener(event, handleFullscreenChange));
+    };
   }, []);
 
   const switchMode = (newMode: TimerMode): void => {

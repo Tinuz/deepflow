@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   description: 'Minimalist, mobile-first focus timer with AI coaching and gamification. Boost your productivity with Pomodoro technique.',
   keywords: ['focus timer', 'pomodoro', 'productivity', 'AI coach', 'deep work'],
   authors: [{ name: 'DeepFlow Team' }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'DeepFlow',
+  },
   openGraph: {
     type: 'website',
     locale: 'nl_NL',
@@ -30,6 +36,8 @@ export const viewport: Viewport = {
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
   ],
+  // iOS PWA settings for fullscreen experience
+  userScalable: true,
 };
 
 interface RootLayoutProps {
