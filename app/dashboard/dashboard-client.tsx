@@ -1,10 +1,24 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Flame, Trophy, Calendar, Clock, ArrowUp, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function DashboardClient(): JSX.Element {
+  const [heatmapData, setHeatmapData] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Generate heatmap data only on client side to avoid hydration mismatch
+    const data = Array.from({ length: 28 }, () => {
+      const rand = Math.random();
+      if (rand > 0.7) return 'bg-primary';
+      if (rand > 0.4) return 'bg-primary/40';
+      return 'bg-secondary';
+    });
+    setHeatmapData(data);
+  }, []);
+
   return (
     <div className="flex-1 flex flex-col p-6 pb-24 overflow-y-auto no-scrollbar space-y-6">
       <header className="flex justify-between items-end mb-2">
@@ -68,17 +82,25 @@ export function DashboardClient(): JSX.Element {
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: 28 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: i * 0.01 }}
-                  className={`aspect-square rounded-sm ${
-                    Math.random() > 0.7 ? 'bg-primary' : Math.random() > 0.4 ? 'bg-primary/40' : 'bg-secondary'
-                  }`}
-                />
-              ))}
+              {heatmapData.length > 0 ? (
+                heatmapData.map((className, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.01 }}
+                    className={`aspect-square rounded-sm ${className}`}
+                  />
+                ))
+              ) : (
+                // Placeholder during SSR
+                Array.from({ length: 28 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-square rounded-sm bg-secondary"
+                  />
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
