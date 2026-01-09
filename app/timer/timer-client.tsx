@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ambientSound, type SoundMode } from './ambient-sounds';
 import { getSessions, saveSession as saveSessionToStorage, formatDuration, getModeLabel, type TimerMode, type SessionHistory } from '@/lib/session-storage';
+import { getSettings } from '@/lib/settings-storage';
 
 interface TimerPreset {
   focus: number;
@@ -39,14 +40,26 @@ export function TimerClient(): JSX.Element {
   
   // No longer need audioRef for ambient sounds - handled by Tone.js
 
-  // Load session history from localStorage
+  // Load session history and settings from localStorage
   useEffect(() => {
     const sessions = getSessions();
     setSessionHistory(sessions);
 
+    // Load user settings
+    const settings = getSettings();
+    setMode(settings.defaultTimerMode);
+    setSound(settings.defaultSound);
+    setVolume(settings.defaultVolume);
+    setNotificationsEnabled(settings.notificationsEnabled);
+    
+    // Set initial timer duration based on default mode
+    const preset = TIMER_PRESETS[settings.defaultTimerMode];
+    setDuration(preset.focus);
+    setTimeLeft(preset.focus);
+
     // Check notification permission
-    if ('Notification' in window && Notification.permission === 'granted') {
-      setNotificationsEnabled(true);
+    if (settings.notificationsEnabled && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
     }
   }, []);
 
