@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   keywords: ['focus timer', 'pomodoro', 'productivity', 'AI coach', 'deep work'],
   authors: [{ name: 'DeepFlow Team' }],
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -25,6 +29,9 @@ export const metadata: Metadata = {
     title: 'DeepFlow - Focus Timer & AI Coach',
     description: 'Minimalist focus timer met AI coaching',
     siteName: 'DeepFlow',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 };
 
