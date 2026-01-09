@@ -5,9 +5,9 @@ import { Play, Pause, RotateCcw, VolumeX, Maximize2, Minimize2, CloudRain, Trees
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ambientSound, type SoundMode } from './ambient-sounds';
 
 type TimerMode = 'pomodoro' | 'deep50' | 'deep90' | 'short' | 'long' | 'custom';
-type SoundMode = 'none' | 'rain' | 'forest' | 'coffee';
 
 interface TimerPreset {
   focus: number;
@@ -46,7 +46,7 @@ export function TimerClient(): JSX.Element {
   const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false);
   const [customMinutes, setCustomMinutes] = useState<number>(25);
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // No longer need audioRef for ambient sounds - handled by Tone.js
 
   // Load session history from localStorage
   useEffect(() => {
@@ -68,6 +68,39 @@ export function TimerClient(): JSX.Element {
       setNotificationsEnabled(true);
     }
   }, []);
+
+  // Handle ambient sound changes
+  useEffect(() => {
+    const playSound = async () => {
+      switch (sound) {
+        case 'rain':
+          await ambientSound.playRain();
+          break;
+        case 'forest':
+          await ambientSound.playForest();
+          break;
+        case 'coffee':
+          await ambientSound.playCoffee();
+          break;
+        case 'none':
+        default:
+          ambientSound.stopAll();
+          break;
+      }
+    };
+
+    playSound();
+
+    return () => {
+      // Cleanup on unmount
+      ambientSound.dispose();
+    };
+  }, [sound]);
+
+  // Handle volume changes
+  useEffect(() => {
+    ambientSound.setVolume(volume);
+  }, [volume]);
 
   // Request notification permission
   const requestNotificationPermission = async (): Promise<void> => {
@@ -130,10 +163,7 @@ export function TimerClient(): JSX.Element {
           saveSession(false);
           sendNotification('Session Complete! 🎉', `Great job! You completed a ${TIMER_PRESETS[mode].label} session.`);
           
-          // Play completion sound
-          if (audioRef.current) {
-            audioRef.current.pause();
-          }
+          // Ambient sound continues playing even after timer completes
         }
         
         return newTime;
@@ -511,7 +541,7 @@ export function TimerClient(): JSX.Element {
                   onClick={applyCustomTime}
                   className="flex-1 py-3 rounded-xl font-semibold bg-primary text-white hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
                 >
-                  Start Timer
+                  Set Timer
                 </button>
               </div>
             </motion.div>
