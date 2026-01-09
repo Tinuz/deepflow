@@ -86,27 +86,32 @@ export function TimerClient(): JSX.Element {
     }
   }, [notificationsEnabled]);
 
-  // Save session to history
-  const saveSession = useCallback((interrupted: boolean = false): void => {
-    const session: SessionHistory = {
-      id: Date.now().toString(),
-      mode,
-      duration: duration - timeLeft,
-      completedAt: new Date(),
-      interrupted,
-    };
-
-    const updated = [session, ...sessionHistory].slice(0, 50); // Keep last 50 sessions
-    setSessionHistory(updated);
-    localStorage.setItem('deepflow-sessions', JSON.stringify(updated));
-  }, [mode, duration, timeLeft, sessionHistory]);
-
   // Timer logic - Fixed to prevent re-running on every tick
   const timeLeftRef = useRef(timeLeft);
+  const sessionHistoryRef = useRef(sessionHistory);
   
   useEffect(() => {
     timeLeftRef.current = timeLeft;
   }, [timeLeft]);
+
+  useEffect(() => {
+    sessionHistoryRef.current = sessionHistory;
+  }, [sessionHistory]);
+
+  // Save session to history - using refs to prevent re-renders
+  const saveSession = useCallback((interrupted: boolean = false): void => {
+    const session: SessionHistory = {
+      id: Date.now().toString(),
+      mode,
+      duration: duration - timeLeftRef.current,
+      completedAt: new Date(),
+      interrupted,
+    };
+
+    const updated = [session, ...sessionHistoryRef.current].slice(0, 50);
+    setSessionHistory(updated);
+    localStorage.setItem('deepflow-sessions', JSON.stringify(updated));
+  }, [mode, duration]); // timeLeft and sessionHistory removed!
 
   useEffect(() => {
     console.log('⏱️ Timer effect triggered:', { isActive, timeLeft, mode });
