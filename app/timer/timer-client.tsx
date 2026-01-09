@@ -43,6 +43,8 @@ export function TimerClient(): JSX.Element {
   const [showHistory, setShowHistory] = useState<boolean>(false);
   const [sessionHistory, setSessionHistory] = useState<SessionHistory[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
+  const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false);
+  const [customMinutes, setCustomMinutes] = useState<number>(25);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -224,11 +226,24 @@ export function TimerClient(): JSX.Element {
     setMode(newMode);
     setIsActive(false);
     
+    // Show custom picker for custom mode
+    if (newMode === 'custom') {
+      setShowCustomPicker(true);
+      return;
+    }
+    
     const preset = TIMER_PRESETS[newMode];
     const newTime = preset.focus;
     
     setDuration(newTime);
     setTimeLeft(newTime);
+  };
+
+  const applyCustomTime = (): void => {
+    const newTime = customMinutes * 60;
+    setDuration(newTime);
+    setTimeLeft(newTime);
+    setShowCustomPicker(false);
   };
 
   const toggleTimer = (): void => {
@@ -423,6 +438,85 @@ export function TimerClient(): JSX.Element {
             </div>
           </div>
         </div>
+
+        {/* Custom Time Picker Modal */}
+        {showCustomPicker && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-background border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            >
+              <h3 className="text-xl font-bold mb-6 text-center">Custom Timer</h3>
+              
+              {/* Time Display */}
+              <div className="text-center mb-6">
+                <div className="text-6xl font-bold text-primary tabular-nums">
+                  {customMinutes}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">minutes</div>
+              </div>
+
+              {/* Slider */}
+              <div className="mb-8">
+                <input
+                  type="range"
+                  min="1"
+                  max="120"
+                  value={customMinutes}
+                  onChange={(e) => setCustomMinutes(Number(e.target.value))}
+                  className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer
+                    [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-primary/25
+                    [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:rounded-full 
+                    [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                  <span>1 min</span>
+                  <span>2 hours</span>
+                </div>
+              </div>
+
+              {/* Quick Select Buttons */}
+              <div className="grid grid-cols-4 gap-2 mb-6">
+                {[5, 15, 25, 45, 60, 90, 120].slice(0, 4).map((min) => (
+                  <button
+                    key={min}
+                    onClick={() => setCustomMinutes(min)}
+                    className={cn(
+                      'py-2 px-3 rounded-lg text-xs font-semibold transition-all',
+                      customMinutes === min
+                        ? 'bg-primary text-white'
+                        : 'bg-secondary text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {min}m
+                  </button>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCustomPicker(false);
+                    setMode('pomodoro');
+                  }}
+                  className="flex-1 py-3 rounded-xl font-semibold bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={applyCustomTime}
+                  className="flex-1 py-3 rounded-xl font-semibold bg-primary text-white hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
+                >
+                  Start Timer
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         {/* Controls - Larger touch targets */}
         <div className="flex items-center gap-4 sm:gap-6 mb-8">
