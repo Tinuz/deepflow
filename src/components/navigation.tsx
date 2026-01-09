@@ -29,7 +29,7 @@ export function Navigation(): JSX.Element | null {
   }
 
   return (
-    <div className="sticky bottom-0 z-50 w-full max-w-md mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-md mx-auto">
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none h-24 bottom-0" />
       <nav className="relative bg-background/80 backdrop-blur-xl border-t border-border px-6 pb-6 pt-3 flex justify-between items-center">
         {navItems.map((item) => {

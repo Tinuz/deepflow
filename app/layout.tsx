@@ -62,7 +62,7 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
             <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/5 blur-[100px]" />
           </div>
 
-          <main className="flex-1 relative z-10 w-full max-w-md mx-auto h-full flex flex-col">
+          <main className="flex-1 relative z-10 w-full max-w-md mx-auto h-full flex flex-col pb-24">
             {children}
           </main>
 
