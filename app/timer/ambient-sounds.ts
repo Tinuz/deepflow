@@ -1,135 +1,378 @@
 import * as Tone from 'tone';
 
-export type SoundMode = 'none' | 'rain' | 'forest' | 'coffee';
+export type SoundMode = 
+  | 'none' 
+  | 'rain' 
+  | 'forest' 
+  | 'cafe' 
+  | 'brown' 
+  | 'pink' 
+  | 'ocean' 
+  | 'airplane';
+
+interface SoundChain {
+  nodes: Tone.ToneAudioNode[];
+  starters: Array<() => void>;
+}
 
 class AmbientSoundService {
-  private rainNoise: Tone.Noise | null = null;
-  private rainFilter: Tone.Filter | null = null;
-  private forestNoise: Tone.Noise | null = null;
-  private forestFilter: Tone.Filter | null = null;
-  private forestLFO: Tone.LFO | null = null;
-  private coffeeNoise: Tone.Noise | null = null;
-  private coffeeFilter: Tone.Filter | null = null;
+  private masterGain: Tone.Gain | null = null;
+  private limiter: Tone.Limiter | null = null;
+  private currentChain: SoundChain | null = null;
   private currentMode: SoundMode = 'none';
-  private volume: Tone.Volume | null = null;
   private isInitialized = false;
+  private fadeOutTimeout: NodeJS.Timeout | null = null;
 
   async init(): Promise<void> {
     if (this.isInitialized) return;
     
     await Tone.start();
-    this.volume = new Tone.Volume(-10).toDestination();
+    
+    // Master chain: limiter → gain → destination
+    this.limiter = new Tone.Limiter(-1);
+    this.masterGain = new Tone.Gain(0); // Start at 0 for fade in
+    
+    this.masterGain.connect(this.limiter);
+    this.limiter.toDestination();
+    
     this.isInitialized = true;
   }
 
-  async playRain(): Promise<void> {
-    await this.init();
-    this.stopAll();
-    
-    // Pink noise filtered to sound like rain
-    this.rainNoise = new Tone.Noise('pink').start();
-    this.rainFilter = new Tone.Filter({
-      type: 'bandpass',
-      frequency: 800,
-      Q: 0.5,
+  private createRainChain(): SoundChain {
+    // Rain Focus: steady hiss, no droplets
+    const noise = new Tone.Noise('pink');
+    const highpass = new Tone.Filter({
+      type: 'highpass',
+      frequency: 1000,
+      rolloff: -12,
     });
-    
-    this.rainNoise.connect(this.rainFilter);
-    this.rainFilter.connect(this.volume!);
-    
-    this.currentMode = 'rain';
-  }
-
-  async playForest(): Promise<void> {
-    await this.init();
-    this.stopAll();
-    
-    // Brown noise with slow modulation for wind/leaves
-    this.forestNoise = new Tone.Noise('brown').start();
-    this.forestFilter = new Tone.Filter({
+    const lowpass = new Tone.Filter({
       type: 'lowpass',
+      frequency: 4500,
+      rolloff: -12,
+    });
+    
+    // Subtle amplitude flutter
+    const lfo = new Tone.LFO({
+      frequency: 0.8,
+      min: 0.85,
+      max: 0.95,
+    });
+    const gainNode = new Tone.Gain(0.9);
+    
+    // Connect chain
+    noise.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(gainNode);
+    gainNode.connect(this.masterGain!);
+    lfo.connect(gainNode.gain);
+    
+    return {
+      nodes: [noise, highpass, lowpass, lfo, gainNode],
+      starters: [() => noise.start(), () => lfo.start()],
+    };
+  }
+
+  private createForestChain(): SoundChain {
+    // Forest Focus: wind/leaves without birds
+    const noise = new Tone.Noise('brown');
+    const highpass = new Tone.Filter({
+      type: 'highpass',
+      frequency: 200,
+      rolloff: -12,
+    });
+    const lowpass = new Tone.Filter({
+      type: 'lowpass',
+      frequency: 4500,
+      rolloff: -12,
+    });
+    
+    // Slow cutoff modulation for wind movement
+    const lfo = new Tone.LFO({
+      frequency: 0.06,
+      min: 3000,
+      max: 5000,
+    });
+    
+    // Connect chain
+    noise.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(this.masterGain!);
+    lfo.connect(lowpass.frequency);
+    
+    return {
+      nodes: [noise, highpass, lowpass, lfo],
+      starters: [() => noise.start(), () => lfo.start()],
+    };
+  }
+
+  private createCafeChain(): SoundChain {
+    // Cafe Focus: room tone, no voices/dishes
+    const noise = new Tone.Noise('pink');
+    const highpass = new Tone.Filter({
+      type: 'highpass',
       frequency: 500,
-      Q: 1,
+      rolloff: -12,
+    });
+    const lowpass = new Tone.Filter({
+      type: 'lowpass',
+      frequency: 3500,
+      rolloff: -12,
     });
     
-    this.forestLFO = new Tone.LFO({
+    // Subtle room ambience flutter
+    const lfo = new Tone.LFO({
+      frequency: 0.4,
+      min: 0.88,
+      max: 0.96,
+    });
+    const gainNode = new Tone.Gain(0.92);
+    
+    // Connect chain
+    noise.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(gainNode);
+    gainNode.connect(this.masterGain!);
+    lfo.connect(gainNode.gain);
+    
+    return {
+      nodes: [noise, highpass, lowpass, lfo, gainNode],
+      starters: [() => noise.start(), () => lfo.start()],
+    };
+  }
+
+  private createBrownNoiseChain(): SoundChain {
+    // Pure brown noise: extreme non-distracting focus masker
+    const noise = new Tone.Noise('brown');
+    const lowpass = new Tone.Filter({
+      type: 'lowpass',
+      frequency: 3000,
+      rolloff: -12,
+    });
+    
+    // Tiny flutter for naturalness
+    const lfo = new Tone.LFO({
       frequency: 0.1,
-      min: 300,
-      max: 700,
-    }).start();
+      min: 0.92,
+      max: 0.98,
+    });
+    const gainNode = new Tone.Gain(0.95);
     
-    this.forestLFO.connect(this.forestFilter.frequency);
-    this.forestNoise.connect(this.forestFilter);
-    this.forestFilter.connect(this.volume!);
+    noise.connect(lowpass);
+    lowpass.connect(gainNode);
+    gainNode.connect(this.masterGain!);
+    lfo.connect(gainNode.gain);
     
-    this.currentMode = 'forest';
+    return {
+      nodes: [noise, lowpass, lfo, gainNode],
+      starters: [() => noise.start(), () => lfo.start()],
+    };
   }
 
-  async playCoffee(): Promise<void> {
-    await this.init();
-    this.stopAll();
-    
-    // White noise filtered to sound like café ambience
-    this.coffeeNoise = new Tone.Noise('white').start();
-    this.coffeeFilter = new Tone.Filter({
-      type: 'bandpass',
-      frequency: 1200,
-      Q: 0.3,
+  private createPinkNoiseChain(): SoundChain {
+    // Neutral pink noise focus
+    const noise = new Tone.Noise('pink');
+    const highpass = new Tone.Filter({
+      type: 'highpass',
+      frequency: 100,
+      rolloff: -12,
+    });
+    const lowpass = new Tone.Filter({
+      type: 'lowpass',
+      frequency: 5000,
+      rolloff: -12,
     });
     
-    this.coffeeNoise.connect(this.coffeeFilter);
-    this.coffeeFilter.connect(this.volume!);
+    noise.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(this.masterGain!);
     
-    this.currentMode = 'coffee';
+    return {
+      nodes: [noise, highpass, lowpass],
+      starters: [() => noise.start()],
+    };
   }
 
-  stopAll(): void {
-    // Stop rain
-    if (this.rainNoise) {
-      this.rainNoise.stop();
-      this.rainNoise.dispose();
-      this.rainNoise = null;
-    }
-    if (this.rainFilter) {
-      this.rainFilter.dispose();
-      this.rainFilter = null;
-    }
+  private createOceanChain(): SoundChain {
+    // Ocean: calm wash with slow wave motion
+    const noise = new Tone.Noise('pink');
+    const bandpass = new Tone.Filter({
+      type: 'bandpass',
+      frequency: 400,
+      Q: 0.8,
+    });
+    const lowpass = new Tone.Filter({
+      type: 'lowpass',
+      frequency: 4500,
+      rolloff: -12,
+    });
     
-    // Stop forest
-    if (this.forestNoise) {
-      this.forestNoise.stop();
-      this.forestNoise.dispose();
-      this.forestNoise = null;
-    }
-    if (this.forestFilter) {
-      this.forestFilter.dispose();
-      this.forestFilter = null;
-    }
-    if (this.forestLFO) {
-      this.forestLFO.stop();
-      this.forestLFO.dispose();
-      this.forestLFO = null;
-    }
+    // Wave motion on frequency and gain
+    const freqLFO = new Tone.LFO({
+      frequency: 0.07,
+      min: 300,
+      max: 550,
+    });
+    const gainLFO = new Tone.LFO({
+      frequency: 0.06,
+      min: 0.7,
+      max: 0.95,
+    });
+    const gainNode = new Tone.Gain(0.85);
     
-    // Stop coffee
-    if (this.coffeeNoise) {
-      this.coffeeNoise.stop();
-      this.coffeeNoise.dispose();
-      this.coffeeNoise = null;
-    }
-    if (this.coffeeFilter) {
-      this.coffeeFilter.dispose();
-      this.coffeeFilter = null;
-    }
+    noise.connect(bandpass);
+    bandpass.connect(lowpass);
+    lowpass.connect(gainNode);
+    gainNode.connect(this.masterGain!);
+    freqLFO.connect(bandpass.frequency);
+    gainLFO.connect(gainNode.gain);
     
+    return {
+      nodes: [noise, bandpass, lowpass, freqLFO, gainLFO, gainNode],
+      starters: [() => noise.start(), () => freqLFO.start(), () => gainLFO.start()],
+    };
+  }
+
+  private createAirplaneChain(): SoundChain {
+    // Airplane cabin: steady rumble, beloved for focus
+    const noise = new Tone.Noise('brown');
+    const bandpass = new Tone.Filter({
+      type: 'bandpass',
+      frequency: 200,
+      Q: 1.0,
+    });
+    const lowpass = new Tone.Filter({
+      type: 'lowpass',
+      frequency: 1500,
+      rolloff: -12,
+    });
+    
+    // Very slow volume variation for cabin feel
+    const lfo = new Tone.LFO({
+      frequency: 0.04,
+      min: 0.8,
+      max: 0.92,
+    });
+    const gainNode = new Tone.Gain(0.86);
+    
+    noise.connect(bandpass);
+    bandpass.connect(lowpass);
+    lowpass.connect(gainNode);
+    gainNode.connect(this.masterGain!);
+    lfo.connect(gainNode.gain);
+    
+    return {
+      nodes: [noise, bandpass, lowpass, lfo, gainNode],
+      starters: [() => noise.start(), () => lfo.start()],
+    };
+  }
+
+  private async fadeIn(): Promise<void> {
+    if (!this.masterGain) return;
+    this.masterGain.gain.setValueAtTime(0, Tone.now());
+    this.masterGain.gain.rampTo(1, 6); // 6 second fade in
+  }
+
+  private async fadeOut(): Promise<void> {
+    if (!this.masterGain) return;
+    
+    return new Promise((resolve) => {
+      this.masterGain!.gain.rampTo(0, 4); // 4 second fade out
+      
+      this.fadeOutTimeout = setTimeout(() => {
+        this.disposeCurrentChain();
+        resolve();
+      }, 4500); // Wait for fade + buffer
+    });
+  }
+
+  private disposeCurrentChain(): void {
+    if (!this.currentChain) return;
+    
+    // Stop and dispose all nodes
+    this.currentChain.nodes.forEach((node) => {
+      if ('stop' in node && typeof node.stop === 'function') {
+        node.stop();
+      }
+      node.dispose();
+    });
+    
+    this.currentChain = null;
+  }
+
+  async playSound(mode: SoundMode): Promise<void> {
+    if (mode === 'none') {
+      await this.stopAll();
+      return;
+    }
+
+    await this.init();
+    await this.fadeOut();
+    
+    // Clear any pending fade timeout
+    if (this.fadeOutTimeout) {
+      clearTimeout(this.fadeOutTimeout);
+      this.fadeOutTimeout = null;
+    }
+
+    // Create appropriate chain
+    let chain: SoundChain;
+    switch (mode) {
+      case 'rain':
+        chain = this.createRainChain();
+        break;
+      case 'forest':
+        chain = this.createForestChain();
+        break;
+      case 'cafe':
+        chain = this.createCafeChain();
+        break;
+      case 'brown':
+        chain = this.createBrownNoiseChain();
+        break;
+      case 'pink':
+        chain = this.createPinkNoiseChain();
+        break;
+      case 'ocean':
+        chain = this.createOceanChain();
+        break;
+      case 'airplane':
+        chain = this.createAirplaneChain();
+        break;
+      default:
+        return;
+    }
+
+    this.currentChain = chain;
+    
+    // Start all oscillators/LFOs
+    chain.starters.forEach((starter) => starter());
+    
+    // Fade in
+    await this.fadeIn();
+    
+    this.currentMode = mode;
+  }
+
+  async stopAll(): Promise<void> {
+    if (this.currentMode === 'none') return;
+    
+    await this.fadeOut();
     this.currentMode = 'none';
   }
 
   setVolume(volumePercent: number): void {
-    if (!this.volume) return;
-    // Convert 0-100 to dB (-60 to 0)
-    const db = volumePercent === 0 ? -Infinity : (volumePercent / 100) * 60 - 60;
-    this.volume.volume.value = db;
+    if (!this.masterGain) return;
+    
+    if (volumePercent === 0) {
+      this.masterGain.gain.rampTo(0, 0.5);
+      return;
+    }
+    
+    // Convert 0-100 to linear gain (0.0 to 1.0), clamped to prevent distortion
+    // At 100%, gain is 0.5 (-6dB) for safety headroom
+    const linearGain = Math.min(0.5, volumePercent / 200);
+    this.masterGain.gain.rampTo(linearGain, 0.5);
   }
 
   getCurrentMode(): SoundMode {
@@ -137,11 +380,21 @@ class AmbientSoundService {
   }
 
   dispose(): void {
-    this.stopAll();
-    if (this.volume) {
-      this.volume.dispose();
-      this.volume = null;
+    if (this.fadeOutTimeout) {
+      clearTimeout(this.fadeOutTimeout);
     }
+    
+    this.disposeCurrentChain();
+    
+    if (this.masterGain) {
+      this.masterGain.dispose();
+      this.masterGain = null;
+    }
+    if (this.limiter) {
+      this.limiter.dispose();
+      this.limiter = null;
+    }
+    
     this.isInitialized = false;
   }
 }

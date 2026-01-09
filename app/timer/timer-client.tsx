@@ -1,26 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RotateCcw, VolumeX, Maximize2, Minimize2, CloudRain, Trees, Coffee, History, Bell, Volume2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, VolumeX, Maximize2, Minimize2, CloudRain, Trees, Coffee, History, Bell, Volume2, Waves, Wind, Plane, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ambientSound, type SoundMode } from './ambient-sounds';
-
-type TimerMode = 'pomodoro' | 'deep50' | 'deep90' | 'short' | 'long' | 'custom';
+import { getSessions, saveSession as saveSessionToStorage, formatDuration, getModeLabel, type TimerMode, type SessionHistory } from '@/lib/session-storage';
 
 interface TimerPreset {
   focus: number;
   break: number;
   label: string;
-}
-
-interface SessionHistory {
-  id: string;
-  mode: TimerMode;
-  duration: number;
-  completedAt: Date;
-  interrupted: boolean;
 }
 
 const TIMER_PRESETS: Record<TimerMode, TimerPreset> = {
@@ -50,18 +41,8 @@ export function TimerClient(): JSX.Element {
 
   // Load session history from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('deepflow-sessions');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setSessionHistory(parsed.map((s: SessionHistory) => ({
-          ...s,
-          completedAt: new Date(s.completedAt),
-        })));
-      } catch (e) {
-        console.error('Failed to load session history', e);
-      }
-    }
+    const sessions = getSessions();
+    setSessionHistory(sessions);
 
     // Check notification permission
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -71,25 +52,7 @@ export function TimerClient(): JSX.Element {
 
   // Handle ambient sound changes
   useEffect(() => {
-    const playSound = async () => {
-      switch (sound) {
-        case 'rain':
-          await ambientSound.playRain();
-          break;
-        case 'forest':
-          await ambientSound.playForest();
-          break;
-        case 'coffee':
-          await ambientSound.playCoffee();
-          break;
-        case 'none':
-        default:
-          ambientSound.stopAll();
-          break;
-      }
-    };
-
-    playSound();
+    ambientSound.playSound(sound);
 
     return () => {
       // Cleanup on unmount
@@ -143,9 +106,9 @@ export function TimerClient(): JSX.Element {
       interrupted,
     };
 
-    const updated = [session, ...sessionHistoryRef.current].slice(0, 50);
+    saveSessionToStorage(session);
+    const updated = getSessions();
     setSessionHistory(updated);
-    localStorage.setItem('deepflow-sessions', JSON.stringify(updated));
   }, [mode, duration]); // timeLeft and sessionHistory removed!
 
   useEffect(() => {
@@ -600,12 +563,16 @@ export function TimerClient(): JSX.Element {
 
         {/* Ambient Sound Controls */}
         <div className="w-full max-w-md space-y-3">
-          <div className="flex items-center justify-center gap-3">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { mode: 'none' as SoundMode, icon: VolumeX, label: 'Off' },
               { mode: 'rain' as SoundMode, icon: CloudRain, label: 'Rain' },
               { mode: 'forest' as SoundMode, icon: Trees, label: 'Forest' },
-              { mode: 'coffee' as SoundMode, icon: Coffee, label: 'Café' },
+              { mode: 'cafe' as SoundMode, icon: Coffee, label: 'Café' },
+              { mode: 'ocean' as SoundMode, icon: Waves, label: 'Ocean' },
+              { mode: 'airplane' as SoundMode, icon: Plane, label: 'Plane' },
+              { mode: 'brown' as SoundMode, icon: Radio, label: 'Brown' },
+              { mode: 'pink' as SoundMode, icon: Wind, label: 'Pink' },
             ].map(({ mode: soundMode, icon: Icon, label }) => (
               <button
                 key={soundMode}
@@ -617,8 +584,8 @@ export function TimerClient(): JSX.Element {
                     : 'text-muted-foreground hover:bg-white/5'
                 )}
               >
-                <Icon size={20} />
-                <span className="text-[10px] font-medium">{label}</span>
+                <Icon size={18} />
+                <span className="text-[9px] font-medium">{label}</span>
               </button>
             ))}
           </div>
@@ -692,14 +659,19 @@ export function TimerClient(): JSX.Element {
                       className="flex items-center justify-between p-3 rounded-xl bg-secondary/50"
                     >
                       <div>
-                        <p className="font-medium text-sm">{TIMER_PRESETS[session.mode].label}</p>
+                        <p className="font-medium text-sm">{getModeLabel(session.mode)}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatTime(session.duration)}
+                          {formatDuration(session.duration)}
                           {session.interrupted && ' (interrupted)'}
                         </p>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(session.completedAt).toLocaleDateString()}
+                        {new Date(session.completedAt).toLocaleDateString('nl-NL', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </p>
                     </div>
                   ))}
