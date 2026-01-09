@@ -175,6 +175,12 @@ export function TimerClient(): JSX.Element {
     setIsActive(!isActive);
   };
 
+  const handleTimerToggle = (e: React.MouseEvent | React.TouchEvent): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleTimer();
+  };
+
   const resetTimer = (): void => {
     if (isActive) {
       saveSession(true);
@@ -312,21 +318,26 @@ export function TimerClient(): JSX.Element {
           {/* Native button for better mobile touch response */}
           <button
             type="button"
-            onClick={toggleTimer}
+            onClick={handleTimerToggle}
             onTouchStart={(e) => {
+              e.preventDefault();
               e.currentTarget.classList.add('scale-95');
             }}
             onTouchEnd={(e) => {
+              e.preventDefault();
               e.currentTarget.classList.remove('scale-95');
+              handleTimerToggle(e);
             }}
             className={cn(
               'w-24 h-24 sm:w-20 sm:h-20 rounded-3xl transition-all duration-300 shadow-xl',
               'flex items-center justify-center touch-manipulation select-none cursor-pointer',
               'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2',
+              '-webkit-tap-highlight-color: transparent',
               isActive
                 ? 'bg-secondary hover:bg-secondary/80 text-foreground'
                 : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/25'
             )}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             {isActive ? (
               <Pause size={36} className="sm:w-8 sm:h-8 pointer-events-none" fill="currentColor" />
