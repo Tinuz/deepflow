@@ -103,13 +103,20 @@ export function TimerClient(): JSX.Element {
 
   // Timer logic
   useEffect(() => {
+    console.log('⏱️ Timer effect triggered:', { isActive, timeLeft, mode });
+    
     let interval: NodeJS.Timeout | undefined;
 
     if (isActive && timeLeft > 0) {
+      console.log('▶️ Starting timer interval');
       interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          console.log('⏰ Tick:', prev - 1);
+          return prev - 1;
+        });
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
+      console.log('🎉 Session complete!');
       setIsActive(false);
       saveSession(false);
       sendNotification('Session Complete! 🎉', `Great job! You completed a ${TIMER_PRESETS[mode].label} session.`);
@@ -118,10 +125,13 @@ export function TimerClient(): JSX.Element {
       if (audioRef.current) {
         audioRef.current.pause();
       }
+    } else {
+      console.log('⏸️ Timer paused or stopped');
     }
 
     return () => {
       if (interval) {
+        console.log('🧹 Cleaning up interval');
         clearInterval(interval);
       }
     };
@@ -169,13 +179,26 @@ export function TimerClient(): JSX.Element {
   };
 
   const toggleTimer = (): void => {
+    console.log('🔄 toggleTimer called - Current state:', { isActive, timeLeft, mode });
+    
     if (!isActive && !notificationsEnabled && 'Notification' in window) {
+      console.log('📢 Requesting notification permission');
       requestNotificationPermission();
     }
-    setIsActive(!isActive);
+    
+    const newState = !isActive;
+    console.log('✅ Setting isActive to:', newState);
+    setIsActive(newState);
   };
 
   const handleTimerToggle = (e: React.MouseEvent | React.TouchEvent): void => {
+    console.log('👆 handleTimerToggle triggered', {
+      type: e.type,
+      isTouch: 'touches' in e,
+      currentIsActive: isActive,
+      timestamp: new Date().toISOString()
+    });
+    
     e.preventDefault();
     e.stopPropagation();
     toggleTimer();
@@ -199,8 +222,15 @@ export function TimerClient(): JSX.Element {
 
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-hidden relative">
+      {/* Debug Info - Visible on screen */}
+      <div className="fixed top-0 left-0 right-0 bg-black/80 text-white text-xs p-2 z-50 font-mono">
+        <div>State: {isActive ? '▶️ RUNNING' : '⏸️ PAUSED'}</div>
+        <div>Time: {formatTime(timeLeft)} / {formatTime(duration)}</div>
+        <div>Mode: {TIMER_PRESETS[mode].label}</div>
+      </div>
+
       {/* Header - Mobile Optimized */}
-      <div className="flex justify-between items-center mb-6 sm:mb-8">
+      <div className="flex justify-between items-center mb-6 sm:mb-8 mt-12">
         <div className="flex gap-2">
           <Button
             variant="ghost"
@@ -318,15 +348,24 @@ export function TimerClient(): JSX.Element {
           {/* Native button for better mobile touch response */}
           <button
             type="button"
-            onClick={handleTimerToggle}
+            onClick={(e) => {
+              console.log('🖱️ onClick fired on play/pause button');
+              handleTimerToggle(e);
+            }}
             onTouchStart={(e) => {
+              console.log('👇 onTouchStart fired');
               e.preventDefault();
               e.currentTarget.classList.add('scale-95');
             }}
             onTouchEnd={(e) => {
+              console.log('👆 onTouchEnd fired');
               e.preventDefault();
               e.currentTarget.classList.remove('scale-95');
               handleTimerToggle(e);
+            }}
+            onTouchCancel={(e) => {
+              console.log('❌ onTouchCancel fired');
+              e.currentTarget.classList.remove('scale-95');
             }}
             className={cn(
               'w-24 h-24 sm:w-20 sm:h-20 rounded-3xl transition-all duration-300 shadow-xl',
